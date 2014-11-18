@@ -106,17 +106,85 @@ But first...
 
 # Introduction to core.typed
 
-* Optional/Gradual typing:
+* Optional/Gradual typing: <!-- .element: class="fragment" data-fragment-index="1" -->
  * "Annotate" definitions with ```(t/ann my-function ...)```
  * Type-check namespace with ```(t/check-ns)```
  * Examine and check types in REPL with ```(t/cf)```
-* More than validation sugar:
+* More than validation sugar: <!-- .element: class="fragment" data-fragment-index="2" -->
  * Type inference
  * Occurence typing
  * Polymorphism
+* [Code] ... <!-- .element: class="fragment" data-fragment-index="3" -->
 
 
 
-# Code
+# core.typed vs prismatic.schema
+
+* ```(> typed schema)```
+ * True type checking/inference rather than validation on function entry.
+ * Not dependent on unit tests
+
+* ```(> schema typed)```
+ * Documentation
+ * Error messages
+ * Support
 
 
+
+# core.typed vs prismatic.schema
+
+* ```(compare schema typed)```
+ * ```typed``` more theoretically ambitious
+ * ```schema``` more obviously feasible
+
+* ```(= schema typed)```
+ * Both more honored in the breach...
+ * Both defeated by recursion
+
+
+
+# tinholes
+
+* So, I came up with a sort of low-technology lens I called the "pinhole"; <!-- .element: class="fragment" data-fragment-index="1" -->
+* it addressed the boilerplate issue, but not type safety;<!-- .element: class="fragment" data-fragment-index="2" -->
+* for that I thought of something else, but couldn't come up with a good name; <!-- .element: class="fragment" data-fragment-index="3" -->
+* hence "tinhole"; the T is for "type".
+* Now that I have that off my chest...  <!-- .element: class="fragment" data-fragment-index="4" -->
+
+
+
+# AWS/amazonica
+
+~~~.clj
+{:spot-price 0.01, 
+   :instance-count 1, 
+   :type "one-time", 
+   :launch-specification
+   {:image-id "ami-something",
+    :instance-type "t1.micro",
+    :placement  {:availability-zone "us-east-1a"},
+    :key-name "your-key"
+    :user-data "WWFua2VlIGRvb2RsZSB3ZW50IHRvIHRvd24gcmlkaW5nIG9uIGEgcG9ueQo="
+    :network-interfaces
+    [{:device-index 0
+      :subnet-id "subnet-yowsa"
+      :groups ["sg-hubba"]}]
+    :iam-instance-profile
+    {:arn "arn:aws:iam::123456789:instance-profile/name-you-chose"}}}
+~~~	
+
+
+
+# Lens goals
+
+* We want to define path aliases:
+~~~.clj
+(def path-dict
+  {:zone    [:launch-specification :placement :availability-zone]
+   :public? [:launch-specification :network-interfaces 0 :associate-public-ip-address]
+   :udata   [:launch-specification :user-data [s->b64 b64->s]]} )
+
+
+
+~~~
+* 
