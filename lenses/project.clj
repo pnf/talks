@@ -5,6 +5,8 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [prismatic/schema "0.3.3"]
+                 [org.clojure/data.json "0.2.5"]
+                 ;[acyclic/utils "0.0.2"]
                  [org.clojure/data.codec "0.1.0"]
                  [org.clojure/core.typed "0.2.72"]
 

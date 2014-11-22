@@ -25,6 +25,7 @@
 
 
 
+
 ;!
 #_(t/defn set-heading [tu :- Turtle
                      h :- String]
@@ -64,10 +65,13 @@
 
 
 
-
-
-
 (t/defn set-x [tu :- Turtle
                x :- String] :- Turtle
                (assoc-in tu [:position :x] x))
+
+
+
+
+
+
 
