@@ -8,13 +8,38 @@ an exploration of <strike>strong</strike> <strike>gradual</strike>  _appropriate
 
 ## Foci
 
+* Language wars.
 * What/why are lenses?
 * Lenses and type.
-* Language wars!
 * Intro to ```core.typed```.
 * Lenses with core.typed.
 * Var Laarhoven lenses
 * What is best?
+
+
+
+## How do you find your bugs?
+
+1. Production failure
+2. Test failure
+3. Compilation errors 
+4. In the REPL
+5. Squiggly red lines
+
+
+
+## delayed pain
+
+![](reftran.png)
+
+
+
+## Clojure
+
+* Referential transparency and strong typing both make certain bugs unlikely.
+* Both make you think.
+* Neither of them is binary.
+* Embracing one but not the other seems arbitrary [to me].
 
 
 
@@ -574,13 +599,38 @@ Actual:     (HMap :mandatory {:p-fmap (All [a b] [(Identity a) [a -> b] ->
 
 
 
-## Don't use van Laarhoven lenses in Clojure
+## Use core.typed; don't use van Laarhoven
 
 * Not even when ```core.typed``` is finished.
 * ```Monad``` & co. are not a natural fit for languages whose compiled output is not type-dependent.
 * Macros _are_ a natural fit for languages that are meaningfully homoiconic.
 * Homoiconicity does not substitute for type-checking, but, if it is innate to the language,
   the type checker may not need to be, thus enabling the sinful pleasures of
-  dynamic typing while stll allowing a stricter regimen to be enforced.
+  dynamic typing while still allowing a stricter regimen to be enforced.
 
 
+
+## What is best?
+
+![](conan.jpg)
+
+
+
+## What is best?
+
+* Minimize \\( \tau_T / \tau_R \\)
+ * For a compiler, go to town with mutable/dynamic.
+ * For a one year of nightly batch you want immutable/static.
+* In Clojure, use type <u>judiciously</u>.
+ * Totally untyped will someday be seen as crazy.
+ * But don't try to be Haskell.
+ * Macros are your secret weapon.
+* ```core.typed```
+ * Doesn't rely on your test coverage.
+ * Sees within functions.
+ * Not Haskell.
+ * Needs your love.
+
+
+
+![](totoro.jpg)
