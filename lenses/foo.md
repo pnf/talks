@@ -34,7 +34,7 @@ an exploration of <strike>strong</strike> <strike>gradual</strike>  _appropriate
 
 
 
-## Clojure
+## Clojure tradeoffs
 
 * Referential transparency and strong typing both make certain bugs unlikely.
 * Both make you think.
@@ -60,7 +60,7 @@ an exploration of <strike>strong</strike> <strike>gradual</strike>  _appropriate
     (defrecord Turtle [^Point position ^double heading ^Color color])
     (def t (->Turtle (->Point 1.0 2.0) (/ Math/PI 4) (->Color 255 0 0)))
 ~~~
-* So what, we have ```assoc-in``` and ```get-in```?
+* So what?  We have ```assoc-in``` and ```get-in```.
 
 
 
@@ -208,10 +208,12 @@ But first...
   {:zone    [:launch-specification :placement :availability-zone]
    :public? [:launch-specification :network-interfaces 0 :associate-public-ip-address]
    :udata   [:launch-specification :user-data [s->b64 b64->s]]} )
+~~~
+* Arbitrary transformations:
+~~~.clj
 (assert (= (th-assoc paths my-req :udata "foo")
            (assoc-in my-req [:launch-specification :user-data] ""Zm9v"))
 ~~~
-
 * Type safety:
 
 ~~~.clj
@@ -278,10 +280,10 @@ But first...
 * Check for vectors
 ~~~.clj
  (defmacro th-get-in [m path]
-  (reduce (fn [acc k]
-               (concat acc
-                       (list (if (vector? k)
-                               `(~(second k)) `(get ~k)))))
+   (reduce (fn [acc k]
+             (concat acc
+                     (list (if (vector? k)
+                              `(~(second k)) `(get ~k)))))
           `(-> ~m) path))
 ~~~
 * Then

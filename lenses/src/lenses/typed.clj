@@ -71,22 +71,25 @@
 
 
 
-(t/defn unionize [s :- (t/Set t/Int)]
-  (let [s (mp-union s #{"hi" "there"})]
+
+
+#_(t/defn unionize [s :- (t/Set t/Int)]
+  (let [s (union s #{"hi" "there"})]
     (map inc s)))
 
 
 
 (t/ann ^:no-check mp-union (t/All [x [x1 :< x :> x]]
-                                (t/IFn [(t/Set x) (t/Set x1) * -> (t/Set x1)])))
+                                  (t/IFn [(t/Set x) (t/Set x1) * -> (t/Set x1)])))
+(def mp-union union)
+
+
+
 
 
 (t/defn set-x [tu :- Turtle
                x :- String] :- Turtle
                (assoc-in tu [:position :x] x))
-
-
-
 
 
 
