@@ -6,6 +6,19 @@ an exploration of <strike>strong</strike> <strike>gradual</strike>  _appropriate
 
 
 
+### Acyclic LLC
+
+<img src="./shared/biggerA.png" width=100px>
+
+acyc.lc
+
+        Peter Fraenkel
+             @podsnap
+          pnf@podsnap.com
+         blog.podsnap.com
+        
+
+
 ## Foci
 
 * Language wars.
