@@ -16,10 +16,10 @@ acyc.lc
              @podsnap
           pnf@podsnap.com
          blog.podsnap.com
-        
 
 
-## Foci
+
+### Foci
 
 * Language wars.
 * What/why are lenses?
@@ -30,8 +30,7 @@ acyc.lc
 * What is best?
 
 
-
-## How do you find your bugs?
+### How do you find your bugs?
 
 1. Production failure
 2. Test failure
@@ -40,14 +39,12 @@ acyc.lc
 5. Squiggly red lines
 
 
-
-## delayed pain
+### delayed pain
 
 ![](reftran.png)
 
 
-
-## Clojure tradeoffs
+### Two virtues
 
 * Referential transparency and strong typing both make certain bugs unlikely.
 * Both make you think.
@@ -56,7 +53,7 @@ acyc.lc
 
 
 
-## What are lenses?
+### What are lenses?
 
 * Essentially: a tool for convenient access to fields of nested structures, especially immutable ones.
 * Originally: something fancy about bidirectional programming.
@@ -73,11 +70,10 @@ acyc.lc
     (defrecord Turtle [^Point position ^double heading ^Color color])
     (def t (->Turtle (->Point 1.0 2.0) (/ Math/PI 4) (->Color 255 0 0)))
 ~~~
-* So what?  We have ```assoc-in``` and ```get-in```.
+* <!-- .element: class="fragment" data-fragment-index="1" --> So what?  We have ```assoc-in``` and ```get-in``` 
 
 
-
-## AWS
+### AWS
 
 Java is the "Kingdom of Nouns"
 
@@ -100,8 +96,7 @@ RequestSpotInstancesResult spotInstancesResult = requestSpotInstances(requestSpo
 ~~~
 
 
-
-## AWS / amazonica
+### AWS / amazonica
 
 * Much nicer:
 ~~~.clj
@@ -123,9 +118,7 @@ RequestSpotInstancesResult spotInstancesResult = requestSpotInstances(requestSpo
 ~~~	
 
 
-
-
-## But...
+### But...
 
 ~~~.clj
 (assoc-in my-req [:launch-specification 0 :subnet-id] "subnet-yowsa")
@@ -135,14 +128,13 @@ RequestSpotInstancesResult spotInstancesResult = requestSpotInstances(requestSpo
 * ```WWFua2VlIGRvb2RsZSB3ZW50IHRvIHRvd24gcmlkaW5nIG9uIGEgcG9ueQo=```?
 
 
-
-## Clojure lenses with type
+### Clojure lenses with type
 
 But first...
 
 
 
-## Introduction to core.typed
+### Introduction to core.typed
 
 * Optional/Gradual typing: <!-- .element: class="fragment" data-fragment-index="1" -->
  * "Annotate" definitions with ```(t/ann my-function ...)```
@@ -155,33 +147,32 @@ But first...
 * [Code] ... <!-- .element: class="fragment" data-fragment-index="3" -->
 
 
-
-## core.typed vs prismatic.schema
+### core.typed vs prismatic.schema
 
 * ```(> typed schema)```
  * True type checking/inference rather than validation on function entry.
  * Not dependent on unit tests
 
 * ```(> schema typed)```
+ * Arbitrary validation functions
  * Documentation
  * Error messages
  * Support
 
 
+### core.typed vs prismatic.schema
 
-## core.typed vs prismatic.schema
-
->* ```(compare schema typed)```
- * ```typed``` more theoretically ambitious
+* ```(compare schema typed)```
+ * ```typed``` more ambitious
  * ```schema``` more obviously feasible
 
 * ```(= schema typed)```
- * Both more honored in the breach...
- * Both defeated by recursion
+ * Batch-oriented: no squiggly red lines
+ * Honored in the breach.
 
 
 
-## tinholes
+### tinholes
 
 * So, I came up with a sort of low-technology lens I called the "pinhole"; <!-- .element: class="fragment" data-fragment-index="1" -->
 * it addressed the boilerplate issue, but not type safety;<!-- .element: class="fragment" data-fragment-index="2" -->
@@ -190,8 +181,7 @@ But first...
 * Now that I have that off my chest...  <!-- .element: class="fragment" data-fragment-index="5" -->
 
 
-
-## AWS/amazonica
+### AWS/amazonica
 
 ~~~.clj
 {:spot-price 0.01, 
@@ -212,8 +202,7 @@ But first...
 ~~~	
 
 
-
-## Lens goals
+### Lens goals
 
 * Path aliases with arbitrary transformations:
 ~~~.clj
@@ -235,8 +224,7 @@ But first...
 ~~~
 
 
-
-## Consider ```get-in```
+### Consider ```get-in```
 
 * Recursive definition over heterogeneous arguments...  <!-- .element: class="fragment" data-fragment-index="1" -->
 ~~~.clj
@@ -256,8 +244,7 @@ But first...
 ~~~
 
 
-
-## Now it seems obvious
+### Now it seems obvious
 
 * Macros to the rescue!
 ~~~.clj
@@ -283,8 +270,7 @@ But first...
 ~~~
 
 
-
-## Transformations
+### Transformations
 
 * An entry along the path might be of the form
 ~~~.clj
@@ -311,8 +297,7 @@ But first...
 ~~~
 
 
-
-## tinhole macros
+### tinhole macros
 
 ~~~.clj
  (th-assoc [path-dict m & kvs])
@@ -329,7 +314,7 @@ But first...
 
 
 
-## That being said
+### That being said
 
     Using macros to pre-compile the lenses is clever, but feels like a
     hack around typed-clojure instead of being aligned to it. All of the
@@ -346,9 +331,7 @@ But first...
 * Can a van Laarhoven representation be made in typed-clojure that recovers this information? <!-- .element: class="fragment" data-fragment-index="4" -->
 
 
-
-
-## Van Laarhoven Lenses
+### Van Laarhoven Lenses
 
 * Haskell
 ~~~.hs
@@ -366,8 +349,7 @@ type Lens s a = Functor f => (a -> f a) -> s -> f s
 * Somehow describes bidirectional access as a single, composable function.
 
 
-
-## Van Laarhoven tl;dr
+### Van Laarhoven tl;dr
 ~~~.hs
 type Lens s a = Functor f => (a -> f a) -> s -> f s
 ~~~
@@ -375,7 +357,7 @@ Make a single lens do different things by passing it different functors.
 
 
 
-## Van Laarhoven without type
+### Van Laarhoven without type
 
 * aka sacrilege <!-- .element: class="fragment" data-fragment-index="1" -->
 * Bare-bones functor interface: <!-- .element: class="fragment" data-fragment-index="2" -->
@@ -398,8 +380,7 @@ Make a single lens do different things by passing it different functors.
 ~~~
 
 
-
-## Const turns out to be useful
+### Const turns out to be useful
 ~~~.clj
   (defrecord Const [getConst]
 	IFunctor
@@ -422,8 +403,7 @@ Make a single lens do different things by passing it different functors.
 ~~~
 
 
-
-## Similarly
+### Similarly
 ~~~.clj
   (defrecord Identity [runIdentity]
      IFunctor
@@ -444,8 +424,7 @@ Make a single lens do different things by passing it different functors.
 ~~~
 
 
-
-## Van Laarhoven recipe
+### Van Laarhoven recipe
 
 * Accept the functor-creating function and the structure:
 ~~~.clj
@@ -468,15 +447,15 @@ Make a single lens do different things by passing it different functors.
 
 
 
-## Van Laarhoven type
+### Van Laarhoven type
 
 * A functor-like interface
 ~~~.clj
-(t/ann-protocol [ [a :variance :covariant] ] IFunctor
-  p-fmap
-  (t/All [b] (t/IFn [(IFunctor a) [a -> b] -> (IFunctor b)])))
-(t/defprotocol IFunctor
-  (p-fmap [this fun]))
+ (t/ann-protocol [ [a :variance :covariant] ] IFunctor
+      p-fmap
+      (t/All [b] (t/IFn [(IFunctor a) [a -> b] -> (IFunctor b)])))
+ (t/defprotocol IFunctor
+      (p-fmap [this fun]))
 ~~~
 * c.f. Haskell
 ~~~.clj
@@ -493,8 +472,7 @@ Make a single lens do different things by passing it different functors.
  * The function is ignored, so you don't have to annotate it.
 
 
-
-## Identity crisis
+### Identity crisis
 * Problem 1: Awkward to annotate interface methods.
 ~~~.clj
   (t/ann-record [ [a :variance :covariant] ] Identity [runIdentity :- a])
@@ -522,8 +500,7 @@ Actual:     (HMap :mandatory {:p-fmap (All [a b] [(Identity a) [a -> b] ->
 ~~~
 
 
-
-## Full speed ahead
+### Full steam ahead
 
 ~~~.clj
 (t/defalias Lens (t/TFn [[s :variance :invariant]
@@ -543,11 +520,9 @@ Actual:     (HMap :mandatory {:p-fmap (All [a b] [(Identity a) [a -> b] ->
 ~~~
 
 
+### Aargh!!!
 
-
-## Aargh!!!
-
-* Emile Victor Rieu  <!-- .element: class="fragment" data-fragment-index="0" -->
+* Homer  <!-- .element: class="fragment" data-fragment-index="0" -->
 		A few speeches in this vein - and evil counsels carried the day.
 		They undid the bag, the Winds all rushed out, and in an instant
 		the tempest was upon them, carrying them headlong out to sea.
@@ -564,8 +539,7 @@ Actual:     (HMap :mandatory {:p-fmap (All [a b] [(Identity a) [a -> b] ->
         ExceptionInfo Type Checker: Found 1 error  clojure.core/ex-info (core.clj:4403)
 
 
-
-## Having no shame
+### Having no shame
 
 ~~~.clj
 (t/defalias DumbFunctor
@@ -573,8 +547,9 @@ Actual:     (HMap :mandatory {:p-fmap (All [a b] [(Identity a) [a -> b] ->
 ~~~
 
 
+### Composition
 
-## Composition
+With currying, you could compose with ```comp```ose.
 
 ~~~.clj
 (t/ann curry (t/All [a b c]
@@ -594,8 +569,7 @@ Actual:     (HMap :mandatory {:p-fmap (All [a b] [(Identity a) [a -> b] ->
 ~~~
 
 
-
-## It works!!!
+### It works!!!
 
 ~~~.clj
 (t/ann l:foo (Lens (t/HMap :mandatory {:foo (t/HVec [t/Int t/Int])})
@@ -614,37 +588,47 @@ Actual:     (HMap :mandatory {:p-fmap (All [a b] [(Identity a) [a -> b] ->
 
 
 
-## Use core.typed; don't use van Laarhoven
+### Don't do this at home.
 
-* Not even when ```core.typed``` is finished.
-* ```Monad``` & co. are not a natural fit for languages whose compiled output is not type-dependent.
-* Macros _are_ a natural fit for languages that are meaningfully homoiconic.
-* Homoiconicity does not substitute for type-checking, but, if it is innate to the language,
-  the type checker may not need to be, thus enabling the sinful pleasures of
-  dynamic typing while still allowing a stricter regimen to be enforced.
+* <!-- .element: class="fragment" data-fragment-index="1" --> Even when ```core.typed``` is "finished"...
+
+* <!-- .element: class="fragment" data-fragment-index="2" --> ```Monad``` & co. are not a natural fit for gradual typing: 
+ * <!-- .element: class="fragment" data-fragment-index="2" --> Compiled output is not type-dependent.
+ * <!-- .element: class="fragment" data-fragment-index="2" --> External static inference engine tries to predict dynamic dispatch.
+
+* <!-- .element: class="fragment" data-fragment-index="3" --> Non-compulsory currying makes "compose with compose" somewhat hollow.
 
 
+### However...
 
-## What is best?
+* <!-- .element: class="fragment" data-fragment-index="1" --> Macros _are_ a natural fit for languages that are meaningfully homoiconic.
+
+* <!-- .element: class="fragment" data-fragment-index="2" --> (Macros are concise and readable, actually look like the same language, and can be written by normal people.)
+
+* <!-- .element: class="fragment" data-fragment-index="3" --> Homoiconicity does not substitute for type-checking but can significantly enhance it.
+
+* <!-- .element: class="fragment" data-fragment-index="4" --> ```core.typed``` + macros + REPL + strong RT is competitive.
+
+
+### What is best?
 
 ![](conan.jpg)
 
 
+### What is best?
 
-## What is best?
-
-* Minimize \\( \tau_T / \tau_R \\)
- * For a compiler, go to town with mutable/dynamic.
- * For a one year of nightly batch you want immutable/static.
-* In Clojure, use type <u>judiciously</u>.
- * Totally untyped will someday be seen as crazy.
- * But don't try to be Haskell.
- * Macros are your secret weapon.
-* ```core.typed```
- * Doesn't rely on your test coverage.
- * Sees within functions.
- * Not Haskell.
- * Needs your love.
+* <!-- .element: class="fragment" data-fragment-index="1" --> Minimize \\( \tau_T / \tau_R \\)
+ * <!-- .element: class="fragment" data-fragment-index="1" --> For a compiler, go to town with mutable/dynamic.
+ * <!-- .element: class="fragment" data-fragment-index="1" --> For a one year of nightly batch you want immutable/static.
+* <!-- .element: class="fragment" data-fragment-index="2" --> In Clojure, use type <u>judiciously</u>.
+ * <!-- .element: class="fragment" data-fragment-index="2" --> Totally untyped will someday be seen as crazy.
+ * <!-- .element: class="fragment" data-fragment-index="2" --> But don't try to be Haskell.
+ * <!-- .element: class="fragment" data-fragment-index="2" --> Macros are your secret weapon.
+* <!-- .element: class="fragment" data-fragment-index="3" --> ```core.typed```
+ * <!-- .element: class="fragment" data-fragment-index="3" --> Doesn't rely on your test coverage.
+ * <!-- .element: class="fragment" data-fragment-index="3" --> Sees within functions.
+ * <!-- .element: class="fragment" data-fragment-index="3" --> Not Haskell (for better or worse).
+ * <!-- .element: class="fragment" data-fragment-index="4" --> Important for Clojure's future (according to me).
 
 
 
