@@ -283,14 +283,54 @@ in: (assoc tu :heading h)
 ~~~
 
 
+### Occurrence typing
+
+* Infer most general type necessary, which might be a union type.
+* Prune type union based on static branch analysis.
+
+
+### Occurrence typing
+
+~~~.clj
+(t/defn set-heading [tu :- Turtle
+                     h :- String]
+  (let    [h (try (Double/parseDouble h) (catch Exception _ nil))]
+    (assoc tu :heading h)
+))
+~~~
+~~~.txt
+Type Error (lenses/typed.clj:44:5) Cannot assoc args 
+  `[(clojure.core.typed/Val :heading) {:then tt, :else ff}]
+   [(clojure.core.typed/U nil double)]` on lenses.typed.Turtle
+in: (assoc tu :heading h)
+~~~
+
+
+### Occurrence typing
+
+~~~.clj
+(t/defn set-heading [tu :- Turtle
+                     h :- String]
+  (if-let [h (try (Double/parseDouble h) (catch Exception _ nil))]
+    (assoc tu :heading h)
+    tu))
+~~~
+
+
 ### Occurrence typing is weird...
 
+* ```union``` is a polymorphic function:
+~~~.clj
+lenses.typed> (t/cf union)
+(t/All [x] [(t/Set x) * -> (t/Set x)])
+~~~
+* This code tries to increment strings.
 ~~~.clj
 (t/defn unionize [s :- (t/Set t/Int)]
   (let [s (union s #{"hi" "there"})]
     (map inc s)))
 ~~~
-
+* core.typed infers a union type and flags the error at the ```map``` call
 ~~~.txt
 Polymorphic function map could not be applied to arguments:
 Domains:
