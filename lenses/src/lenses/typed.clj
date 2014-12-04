@@ -37,10 +37,8 @@
 
 
 
-
-
 ;!
-#_(t/defn set-heading [tu :- Turtle
+(t/defn set-heading [tu :- Turtle
                      h :- String]
   (let [h (try (Double/parseDouble h) (catch Exception _ nil))]
     (assoc tu :heading h)
@@ -48,7 +46,7 @@
 
 
 
-#_(t/cf (t/fn [x :- Double ] (if (> 0.0 x) (Math/log x) "Bleh")))
+#_(t/cf (t/fn [x :- Double ] (if (> 0.0 x) (Math/log x) "Bleh")))#_
 
 
 
@@ -60,7 +58,7 @@
 
 ;; Spot the error
 #_(t/defn set-headings [tu :- Turtle
-                        headings :- (t/Seq Heading)]
+                        headings :- Heading]
   (map (t/fn [h :- Heading]
          (assoc tu :heading (condp = (:units h)
                                   :radians (:angle h)
@@ -70,11 +68,9 @@
 
 
 
-
-
-
-#_(t/defn unionize [s :- (t/Set t/Int)]
-  (let [s (union s #{"hi" "there"})]
+; Why is this wrong?  And where is it wrong?
+(t/defn unionize [s :- (t/Set t/Int)]
+  (let [s (mp-union s #{"hi" "there"})]
     (map inc s)))
 
 

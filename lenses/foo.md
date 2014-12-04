@@ -26,7 +26,7 @@ acyc.lc
 * Lenses and type.
 * Intro to ```core.typed```.
 * Lenses with core.typed.
-* Var Laarhoven lenses
+* Van Laarhoven lenses.		 [eviscerate]
 * What is best?
 
 
@@ -52,6 +52,14 @@ acyc.lc
 * Embracing one but not the other seems arbitrary [to me].
 
 
+### TL;DR
+
+* Clojure can have both RT (built in) and ST (via ```core.typed```),
+* but it isn't Haskell,
+* and monads aren't a natural fit,
+* but macros are (which turns out to be important).
+
+
 
 ### What are lenses?
 
@@ -71,6 +79,10 @@ acyc.lc
     (def t (->Turtle (->Point 1.0 2.0) (/ Math/PI 4) (->Color 255 0 0)))
 ~~~
 * <!-- .element: class="fragment" data-fragment-index="1" --> So what?  We have ```assoc-in``` and ```get-in``` 
+
+
+
+### AWS
 
 
 ### AWS
@@ -145,6 +157,178 @@ But first...
  * Occurence typing
  * Polymorphism
 * [Code] ... <!-- .element: class="fragment" data-fragment-index="3" -->
+
+
+### Ye turtle
+
+~~~.clj
+ 
+(defrecord Point [x y])
+ 
+(defrecord Color [r g b])
+ 
+ 
+ 
+(defrecord  Turtle [position color heading])
+~~~
+
+
+### Ye turtle
+
+~~~.clj
+(t/ann-record Point [x :- t/Num, y :- t/Num])
+(defrecord Point [x y])
+(t/ann-record Color [r :- t/Int, g :- t/Int, b :- t/Int])
+(defrecord Color [r g b])
+(t/ann-record Turtle [position :- Point,
+                      color :- Color
+                      heading :- t/Num])
+(defrecord  Turtle [position color heading])
+ 
+ 
+(t/def myrtle :- Turtle
+  (->Turtle (->Point 3.5 5.5) (->Color 0 255 0) (/ Math/PI 4.)))
+
+(t/def hurtle :- Turtle
+  (->Turtle (->Point 3.5 5.5) (/ Math/PI 4.) (->Color 0 255 0)))
+~~~
+
+~~~.txt 
+Function ->Turtle could not be applied to arguments:
+Domains:
+	lenses.typed.Point lenses.typed.Color t/Num
+Arguments:
+	Point java.lang.Double Color
+~~~
+<!-- .element: class="fragment" data-fragment-index="2" -->
+
+
+### hash maps
+
+~~~.clj
+(t/defn straighten [tu :- Turtle] :- Turtle
+  (assoc tu :heading 0.0))
+ 
+(t/defn go-north [tu :- Turtle] :- Turtle
+  (assoc tu :heading "north"))
+~~~
+~~~.txt
+Type Error Cannot assoc args
+   `[(clojure.core.typed/Val :heading) {:then tt, :else ff}]
+    [(clojure.core.typed/Val "north") {:then tt, :else ff}]` on lenses.typed.Turtle
+in: (assoc tu :heading north)
+~~~
+<!-- .element: class="fragment" data-fragment-index="2" -->
+
+
+### Occurrence typing
+
+~~~.clj
+(t/defn set-heading [tu :- Turtle
+                     h :- String]
+  (let    [h (try (Double/parseDouble h) (catch Exception _ nil))]
+    (assoc tu :heading h)
+))
+~~~
+~~~.txt
+Type Error (lenses/typed.clj:44:5) Cannot assoc args 
+  `[(clojure.core.typed/Val :heading) {:then tt, :else ff}]
+   [(clojure.core.typed/U nil double)]` on lenses.typed.Turtle
+in: (assoc tu :heading h)
+~~~
+
+
+### Occurrence typing
+
+~~~.clj
+(t/defn set-heading [tu :- Turtle
+                     h :- String]
+  (if-let [h (try (Double/parseDouble h) (catch Exception _ nil))]
+    (assoc tu :heading h)
+    tu))
+~~~
+
+
+### Find the error!
+
+~~~.clj
+(t/defalias Heading (t/HMap :mandatory
+     {:angle Double
+      :units (t/U (t/Val :radians) (t/Val :degrees))}) )
+ 
+(t/defn set-headings [tu :- Turtle
+                      headings :- Heading]
+ (map
+  (t/fn [h :- Heading]
+   (assoc tu :heading (condp = (:units h)
+                        :radians (:angle h)
+                        :degrees (* (/ (:angle h) 180.) Math/PI))) headings)))
+~~~
+
+
+### Fixed the error!
+
+~~~.clj
+(t/defalias Heading (t/HMap :mandatory
+     {:angle Double
+      :units (t/U (t/Val :radians) (t/Val :degrees))}) )
+ 
+(t/defn set-headings [tu :- Turtle
+                      headings :- Heading]
+ (map
+  (t/fn [h :- Heading]
+   (assoc tu :heading (condp = (:units h)
+                        :radians (:angle h)
+                        :degrees (* (/ (:angle h) 180.) Math/PI)))) headings))
+~~~
+
+
+### Occurrence typing is weird...
+
+~~~.clj
+(t/defn unionize [s :- (t/Set t/Int)]
+  (let [s (union s #{"hi" "there"})]
+    (map inc s)))
+~~~
+
+~~~.txt
+Polymorphic function map could not be applied to arguments:
+Domains:
+	[a b ... b -> c] (t/NonEmptySeqable a) (t/NonEmptySeqable b) ... b
+	[a b ... b -> c] (t/U nil (Seqable a)) (t/U nil (Seqable b)) ... b
+Arguments:
+	(t/IFn [java.lang.Long -> java.lang.Long] [java.lang.Double -> java.lang.Double] [t/AnyInteger -> t/AnyInteger] [java.lang.Number -> java.lang.Number])
+    (t/Set (t/U (t/Val "there") (t/Val "hi") Short Byte Integer BigInteger Long BigInt))
+~~~
+
+~~~.clj
+lenses.typed> (t/cf union)
+(t/All [x] [(t/Set x) * -> (t/Set x)])
+~~~
+
+
+### Choose your error
+
+~~~.clj
+(t/defn unionize [s :- (t/Set t/Int)]
+  (let [s (mp-union s #{"hi" "there"})]
+    (map inc s)))
+~~~
+
+~~~.txt
+Polymorphic function mp-union could not be applied to arguments:
+Domains:
+	(t/Set x) (t/Set x1) *
+
+Arguments:
+	(t/Set t/Int) (t/HSet #{"hi" "there"})
+
+~~~
+
+~~~.clj
+lenses.typed> (t/cf mp-union)
+(t/All [x [x1 :< x :> x]] [(t/Set x) (t/Set x1) * -> (t/Set x1)])
+~~~
 
 
 ### core.typed vs prismatic.schema
@@ -628,7 +812,7 @@ With currying, you could compose with ```comp```ose.
  * <!-- .element: class="fragment" data-fragment-index="3" --> Doesn't rely on your test coverage.
  * <!-- .element: class="fragment" data-fragment-index="3" --> Sees within functions.
  * <!-- .element: class="fragment" data-fragment-index="3" --> Not Haskell (for better or worse).
- * <!-- .element: class="fragment" data-fragment-index="4" --> Important for Clojure's future (according to me).
+ * <!-- .element: class="fragment" data-fragment-index="4" --> Needs your love.
 
 
 
