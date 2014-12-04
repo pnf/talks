@@ -87,7 +87,7 @@ acyc.lc
 
 ### AWS
 
-Java is the "Kingdom of Nouns"
+Java interface has special-purpose mutable classes.
 
 ~~~.java
 RequestSpotInstancesRequest
@@ -221,34 +221,6 @@ in: (assoc tu :heading north)
 <!-- .element: class="fragment" data-fragment-index="2" -->
 
 
-### Occurrence typing
-
-~~~.clj
-(t/defn set-heading [tu :- Turtle
-                     h :- String]
-  (let    [h (try (Double/parseDouble h) (catch Exception _ nil))]
-    (assoc tu :heading h)
-))
-~~~
-~~~.txt
-Type Error (lenses/typed.clj:44:5) Cannot assoc args 
-  `[(clojure.core.typed/Val :heading) {:then tt, :else ff}]
-   [(clojure.core.typed/U nil double)]` on lenses.typed.Turtle
-in: (assoc tu :heading h)
-~~~
-
-
-### Occurrence typing
-
-~~~.clj
-(t/defn set-heading [tu :- Turtle
-                     h :- String]
-  (if-let [h (try (Double/parseDouble h) (catch Exception _ nil))]
-    (assoc tu :heading h)
-    tu))
-~~~
-
-
 ### Find the error!
 
 ~~~.clj
@@ -341,34 +313,29 @@ Arguments:
     (t/Set (t/U (t/Val "there") (t/Val "hi") Short Byte Integer BigInteger Long BigInt))
 ~~~
 
-~~~.clj
-lenses.typed> (t/cf union)
-(t/All [x] [(t/Set x) * -> (t/Set x)])
-~~~
-
 
 ### Choose your error
 
+* If we use an more restrictive union,
+~~~.clj
+lenses.typed> (t/cf mp-union)
+(t/All [x [x1 :< x :> x]] [(t/Set x) (t/Set x1) * -> (t/Set x1)])
+~~~
+* then
 ~~~.clj
 (t/defn unionize [s :- (t/Set t/Int)]
   (let [s (mp-union s #{"hi" "there"})]
     (map inc s)))
 ~~~
-
+* core.typed flags the error at the ```mp-union``` call:
 ~~~.txt
 Polymorphic function mp-union could not be applied to arguments:
 Domains:
 	(t/Set x) (t/Set x1) *
-
 Arguments:
 	(t/Set t/Int) (t/HSet #{"hi" "there"})
-
 ~~~
 
-~~~.clj
-lenses.typed> (t/cf mp-union)
-(t/All [x [x1 :< x :> x]] [(t/Set x) (t/Set x1) * -> (t/Set x1)])
-~~~
 
 
 ### core.typed vs prismatic.schema
