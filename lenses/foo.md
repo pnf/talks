@@ -6,11 +6,10 @@ an exploration of <strike>strong</strike> <strike>gradual</strike>  _appropriate
 
 
 
-### Acyclic LLC
+### me
 
-<img src="./shared/biggerA.png" width=100px>
-
-acyc.lc
+<img src="./shared/biggerA.png" height=100px>
+<img src="./shared/shadow.jpg" height=100px>
 
         Peter Fraenkel
              @podsnap
@@ -129,7 +128,7 @@ RequestSpotInstancesResult spotInstancesResult = requestSpotInstances(requestSpo
 ~~~	
 
 
-### But...
+### Nice, but...
 
 ~~~.clj
 (assoc-in my-req [:launch-specification 0 :subnet-id] "subnet-yowsa")
@@ -183,14 +182,18 @@ But first...
                       color :- Color
                       heading :- t/Num])
 (defrecord  Turtle [position color heading])
- 
- 
+~~~
+
+~~~.clj
 (t/def myrtle :- Turtle
   (->Turtle (->Point 3.5 5.5) (->Color 0 255 0) (/ Math/PI 4.)))
+~~~
 
+~~~.clj
 (t/def hurtle :- Turtle
   (->Turtle (->Point 3.5 5.5) (/ Math/PI 4.) (->Color 0 255 0)))
 ~~~
+<!-- .element: class="fragment" data-fragment-index="2" -->
 
 ~~~.txt 
 Function ->Turtle could not be applied to arguments:
@@ -199,7 +202,7 @@ Domains:
 Arguments:
 	Point java.lang.Double Color
 ~~~
-<!-- .element: class="fragment" data-fragment-index="2" -->
+<!-- .element: class="fragment roll-in" data-fragment-index="3" -->
 
 
 ### hash maps
@@ -217,7 +220,7 @@ Type Error Cannot assoc args
     [(clojure.core.typed/Val "north") {:then tt, :else ff}]` on lenses.typed.Turtle
 in: (assoc tu :heading north)
 ~~~
-<!-- .element: class="fragment" data-fragment-index="2" -->
+<!-- .element: class="fragment roll-in" data-fragment-index="2" -->
 
 
 ### Find the error!
@@ -269,15 +272,14 @@ in: (assoc tu :heading north)
     (assoc tu :heading h)
 ))
 ~~~
+
 ~~~.txt
 Type Error (lenses/typed.clj:44:5) Cannot assoc args 
   `[(clojure.core.typed/Val :heading) {:then tt, :else ff}]
    [(clojure.core.typed/U nil double)]` on lenses.typed.Turtle
 in: (assoc tu :heading h)
 ~~~
-
-
-### Occurrence typing
+<!-- .element: class="fragment roll-in" data-fragment-index="2" -->
 
 ~~~.clj
 (t/defn set-heading [tu :- Turtle
@@ -286,6 +288,12 @@ in: (assoc tu :heading h)
     (assoc tu :heading h)
     tu))
 ~~~
+<!-- .element: class="fragment" data-fragment-index="3" -->
+
+~~~.clj
+:ok
+~~~
+<!-- .element: class="fragment roll-in" data-fragment-index="3" -->
 
 
 ### Occurrence typing is weird...
@@ -295,13 +303,13 @@ in: (assoc tu :heading h)
 lenses.typed> (t/cf union)
 (t/All [x] [(t/Set x) * -> (t/Set x)])
 ~~~
-* This code tries to increment strings.
+* <!-- .element: class="fragment" data-fragment-index="2" --> This code tries to increment strings.
 ~~~.clj
 (t/defn unionize [s :- (t/Set t/Int)]
   (let [s (union s #{"hi" "there"})]
     (map inc s)))
 ~~~
-* core.typed infers a union type and flags the error at the ```map``` call
+* <!-- .element: class="fragment" data-fragment-index="3" --> core.typed infers a union type and flags the error at the ```map``` call
 ~~~.txt
 Polymorphic function map could not be applied to arguments:
 Domains:
@@ -318,16 +326,17 @@ Arguments:
 
 * If we use an more restrictive union,
 ~~~.clj
-lenses.typed> (t/cf mp-union)
-(t/All [x [x1 :< x :> x]] [(t/Set x) (t/Set x1) * -> (t/Set x1)])
+(t/ann ^:no-check mp-union (t/All [x [x1 :< x :> x]]
+                                  (t/IFn [(t/Set x) (t/Set x1) * -> (t/Set x1)])))
+(def mp-union union)
 ~~~
-* then
+* and use it in the same bad code, <!-- .element: class="fragment" data-fragment-index="2" -->
 ~~~.clj
 (t/defn unionize [s :- (t/Set t/Int)]
   (let [s (mp-union s #{"hi" "there"})]
     (map inc s)))
 ~~~
-* core.typed flags the error at the ```mp-union``` call:
+* <!-- .element: class="fragment" data-fragment-index="3" --> core.typed flags the error at the ```mp-union``` call:
 ~~~.txt
 Polymorphic function mp-union could not be applied to arguments:
 Domains:
@@ -402,7 +411,7 @@ lenses> (t/cf (t/ann-form (assoc-in my-req ["launch-specification" :image-id] "s
 
 ### Lens goals
 
-* Path aliases with arbitrary transformations:
+* Path aliases:
 ~~~.clj
 (def paths
   {:zone    [:launch-specification :placement :availability-zone]
@@ -415,7 +424,6 @@ lenses> (t/cf (t/ann-form (assoc-in my-req ["launch-specification" :image-id] "s
            (assoc-in my-req [:launch-specification :user-data] ""Zm9v"))
 ~~~
 * Type safety:
-
 ~~~.clj
 ;; Boom!
 (t/cf (t/ann-form (th-assoc-in my-req ["launch-specification" :image-id] 101)
@@ -428,7 +436,7 @@ lenses> (t/cf (t/ann-form (assoc-in my-req ["launch-specification" :image-id] "s
 
 ### Consider ```get-in```
 
-* Recursive definition over heterogeneous arguments...  <!-- .element: class="fragment" data-fragment-index="1" -->
+* Recursive traversal through heterogeneous structure...  <!-- .element: class="fragment" data-fragment-index="1" -->
 ~~~.clj
   (defn get-in [m ks] (reduce get m ks))
 ~~~
@@ -440,9 +448,11 @@ lenses> (t/cf (t/ann-form (assoc-in my-req ["launch-specification" :image-id] "s
 ~~~.clj
   (t/cf (get-in {:a 0 :b {:c "d"}} [:b :c]))  ;; t/Any
 ~~~
-* <!-- .element: class="fragment" data-fragment-index="4" --> But nested ```get``` is fine:
+* <!-- .element: class="fragment" data-fragment-index="4" --> But explicitly nested ```get``` is fine:
 ~~~.clj
-  (t/cf (-> {:a 0 :b {:c "d"}} (get :b) (get :c))) ;; (t/Val "d")
+  (t/cf (-> {:a 0 :b {:c "d"}}
+            (get :b)
+            (get :c))) ;; (t/Val "d")
 ~~~
 
 
@@ -571,7 +581,7 @@ lenses> (t/cf (t/ann-form (assoc-in my-req ["launch-specification" :image-id] "s
 
 1. Yes! <!-- .element: class="fragment" data-fragment-index="1" -->
 
-2. Not without horror. <!-- .element: class="fragment" data-fragment-index="2" -->
+2. The horror. <!-- .element: class="fragment" data-fragment-index="2" -->
 
 ![horror](horror.jpg) <!-- .element: class="fragment" data-fragment-index="2" -->
 
@@ -599,7 +609,8 @@ type Lens s a = Functor f => (a -> f a) -> s -> f s
 ~~~.hs
 type Lens s a = Functor f => (a -> f a) -> s -> f s
 ~~~
-Make a single lens do different things by passing it different functors.
+You can make a single function of this form do many different things
+by passing it arbitrarily crafted functors.
 
 
 ### Van Laarhoven fly-by
@@ -848,7 +859,7 @@ With currying, you could compose with ```comp```ose.
  * <!-- .element: class="fragment" data-fragment-index="2" --> Compiled output is not type-dependent.
  * <!-- .element: class="fragment" data-fragment-index="2" --> External static inference engine tries to predict dynamic dispatch.
 
-* <!-- .element: class="fragment" data-fragment-index="3" --> Non-compulsory currying makes "compose with compose" somewhat hollow.
+* <!-- .element: class="fragment" data-fragment-index="3" --> Non-compulsory currying makes "compose with compose" somewhat less impressive.
 
 
 ### However...
@@ -870,8 +881,8 @@ With currying, you could compose with ```comp```ose.
 ### What is best?
 
 * <!-- .element: class="fragment" data-fragment-index="1" --> Minimize \\( \tau_T / \tau_R \\)
- * <!-- .element: class="fragment" data-fragment-index="1" --> For a compiler, go to town with mutable/dynamic.
- * <!-- .element: class="fragment" data-fragment-index="1" --> For a one year of nightly batch you want immutable/static.
+ * <!-- .element: class="fragment" data-fragment-index="1" --> For a compiler, go to town with mutable/dynamic,
+ * <!-- .element: class="fragment" data-fragment-index="1" -->  but generally you want immutable/static.
 * <!-- .element: class="fragment" data-fragment-index="2" --> In Clojure, use type <u>judiciously</u>.
  * <!-- .element: class="fragment" data-fragment-index="2" --> Totally untyped will someday be seen as crazy.
  * <!-- .element: class="fragment" data-fragment-index="2" --> But don't try to be Haskell.
