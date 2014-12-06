@@ -26,7 +26,7 @@ acyc.lc
 * Lenses and type.
 * Intro to ```core.typed```.
 * Lenses with core.typed.
-* Van Laarhoven lenses.		 [eviscerate]
+* Van Laarhoven lenses.
 * What is best?
 
 
@@ -110,7 +110,6 @@ RequestSpotInstancesResult spotInstancesResult = requestSpotInstances(requestSpo
 
 ### AWS / amazonica
 
-* Much nicer:
 ~~~.clj
 {:spot-price 0.01, 
    :instance-count 1, 
@@ -309,7 +308,8 @@ Domains:
 	[a b ... b -> c] (t/NonEmptySeqable a) (t/NonEmptySeqable b) ... b
 	[a b ... b -> c] (t/U nil (Seqable a)) (t/U nil (Seqable b)) ... b
 Arguments:
-	(t/IFn [java.lang.Long -> java.lang.Long] [java.lang.Double -> java.lang.Double] [t/AnyInteger -> t/AnyInteger] [java.lang.Number -> java.lang.Number])
+	(t/IFn [java.lang.Long -> java.lang.Long] [java.lang.Double -> java.lang.Double]
+           [t/AnyInteger -> t/AnyInteger] [java.lang.Number -> java.lang.Number])
     (t/Set (t/U (t/Val "there") (t/Val "hi") Short Byte Integer BigInteger Long BigInt))
 ~~~
 
@@ -337,29 +337,57 @@ Arguments:
 ~~~
 
 
+### Back to AWS
 
-### core.typed vs prismatic.schema
+~~~.clj
+(t/defalias NetworkInterface
+  (t/HMap :mandatory {:device-index t/Int
+                      :subnet-id String
+                      :groups (t/Vec String)}))
+(t/defalias Launch-Specification
+  (t/HMap :mandatory {:image-id String,
+                      :instance-type String,
+                      :placement  (t/HMap :mandatory {:availability-zone String}),
+                      :key-name String,
+                      :user-data String,
+                      :network-interfaces (t/Vec NetworkInterface)
+                      :iam-instance-profile (t/HMap :mandatory {:arn String})}))
+(t/defalias Spot-Request
+  (t/HMap :mandatory {:spot-price Double
+                      :type String
+                      :launch-specification Launch-Specification}))
+~~~
 
-* ```(> typed schema)```
- * True type checking/inference rather than validation on function entry.
- * Not dependent on unit tests
 
-* ```(> schema typed)```
- * Arbitrary validation functions
- * Documentation
- * Error messages
- * Support
+### Back to AWS
 
-
-### core.typed vs prismatic.schema
-
-* ```(compare schema typed)```
- * ```typed``` more ambitious
- * ```schema``` more obviously feasible
-
-* ```(= schema typed)```
- * Batch-oriented: no squiggly red lines
- * Honored in the breach.
+~~~.clj
+(t/defalias Launch-Specification
+  (t/HMap :mandatory {:image-id String,  ...}))
+(t/defalias Spot-Request
+  (t/HMap :mandatory {:spot-price Double
+                      :launch-specification Launch-Specification ...}))
+~~~
+* Good:  <!-- .element: class="fragment" data-fragment-index="1" -->
+~~~.clj
+lenses> (t/cf (t/ann-form (assoc my-req :spot-price 1.0) Spot-Request))
+Spot-Request
+~~~
+* Well spotted! <!-- .element: class="fragment" data-fragment-index="2" -->
+~~~.clj
+lenses> (t/cf (t/ann-form (assoc my-req :spot-price "thin dime") Spot-Request))
+  Type mismatch:
+  Expected: 	Spot-Request
+  Actual: 	(t/HMap :mandatory {:spot-price (t/Val "thin dime"), :type java.lang.String, ...})
+~~~
+* Uh oh: <!-- .element: class="fragment" data-fragment-index="3" -->
+~~~.clj
+lenses> (t/cf (t/ann-form (assoc-in my-req ["launch-specification" :image-id] "stringy")
+                           Spot-Request))
+  Type mismatch:
+  Expected: Spot-Request
+  Actual: 	t/Any
+~~~
 
 
 
@@ -370,27 +398,6 @@ Arguments:
 * for that I thought of something else, but couldn't come up with a good name; <!-- .element: class="fragment" data-fragment-index="3" -->
 * hence "tinhole"; the T is for "type".<!-- .element: class="fragment" data-fragment-index="4" -->
 * Now that I have that off my chest...  <!-- .element: class="fragment" data-fragment-index="5" -->
-
-
-### AWS/amazonica
-
-~~~.clj
-{:spot-price 0.01, 
-   :instance-count 1, 
-   :type "one-time", 
-   :launch-specification
-   {:image-id "ami-something",
-    :instance-type "t1.micro",
-    :placement  {:availability-zone "us-east-1a"},
-    :key-name "your-key"
-    :user-data "WWFua2VlIGRvb2RsZSB3ZW50IHRvIHRvd24gcmlkaW5nIG9uIGEgcG9ueQo="
-    :network-interfaces
-    [{:device-index 0
-      :subnet-id "subnet-yowsa"
-      :groups ["sg-hubba"]}]
-    :iam-instance-profile
-    {:arn "arn:aws:iam::123456789:instance-profile/name-you-chose"}}}
-~~~	
 
 
 ### Lens goals
@@ -410,8 +417,12 @@ Arguments:
 * Type safety:
 
 ~~~.clj
-(t/ann my-req SpotReqAlias)
-(t/cf (th-assoc paths my-req :udata 3.5)) ;; explodes
+;; Boom!
+(t/cf (t/ann-form (th-assoc-in my-req ["launch-specification" :image-id] 101)
+                  Spot-Request))
+;; No boom!
+(t/cf (t/ann-form (th-assoc-in my-req ["launch-specification" :image-id] "101")
+                  Spot-Request))
 ~~~
 
 
@@ -429,7 +440,7 @@ Arguments:
 ~~~.clj
   (t/cf (get-in {:a 0 :b {:c "d"}} [:b :c]))  ;; t/Any
 ~~~
-* However:  <!-- .element: class="fragment" data-fragment-index="4" -->
+* <!-- .element: class="fragment" data-fragment-index="4" --> But nested ```get``` is fine:
 ~~~.clj
   (t/cf (-> {:a 0 :b {:c "d"}} (get :b) (get :c))) ;; (t/Val "d")
 ~~~
@@ -463,11 +474,11 @@ Arguments:
 
 ### Transformations
 
-* An entry along the path might be of the form
+* Let an entry along the path be of the form: <!-- .element: class="fragment" data-fragment-index="1" -->
 ~~~.clj
-  [inbound outbound]
+  [inbound-transform outbound-transform]
 ~~~
-* Check for vectors
+* Just check for vectors in the macro: <!-- .element: class="fragment" data-fragment-index="2" -->
 ~~~.clj
  (defmacro th-get-in [m path]
    (reduce (fn [acc k]
@@ -476,12 +487,12 @@ Arguments:
                               `(~(second k)) `(get ~k)))))
           `(-> ~m) path))
 ~~~
-* Then
+* Then <!-- .element: class="fragment" data-fragment-index="3" -->
 ~~~.clj
 (th-get-in {:a "{\"b\" : 3}" }
            [:a [print-json read-json] :b])
 ~~~
-* Returns 3 and expands to:
+* Returns 3 and expands to: <!-- .element: class="fragment" data-fragment-index="3" -->
 ~~~.clj
 (-> {:a "{\"b\" : 3}"}
     (get :a) (read-json) (get :b))
@@ -501,25 +512,69 @@ Arguments:
 * It gets a little complicated, but not terrible.
 * Rescues type safety.
 * Slightly faster.
-* Why _ever_ have dynamic, bounded recursion?
-
+* "Just works."
 
 
 ### That being said
 
-    Using macros to pre-compile the lenses is clever, but feels like a
-    hack around typed-clojure instead of being aligned to it. All of the
-    information needed to determine a lens' action is available at
-    compile time even prior to expansion.  Can a van Laarhoven
-    representation be made in typed-clojure that recovers this
-    information?
+> Using macros to pre-compile the lenses is clever, but feels like a
+> hack around typed-clojure instead of being aligned to it. All of the
+> information needed to determine a lens' action is available at
+> compile time even prior to expansion.  Can a van Laarhoven
+> representation be made in typed-clojure that recovers this
+> information?
 
  &mdash; some guy on Hacker News
 
-* CLEVER <!-- .element: class="fragment" data-fragment-index="1" -->
-* BUT  <!-- .element: class="fragment" data-fragment-index="2" -->
-* FEELS LIKE A HACK ... <!-- .element: class="fragment" data-fragment-index="3" -->
-* Can a van Laarhoven representation be made in typed-clojure that recovers this information? <!-- .element: class="fragment" data-fragment-index="4" -->
+
+### That being said
+
+> Using macros to pre-compile the lenses is **CLEVER**, but feels like a
+> hack around typed-clojure instead of being aligned to it. All of the
+> information needed to determine a lens' action is available at
+> compile time even prior to expansion.  Can a van Laarhoven
+> representation be made in typed-clojure that recovers this
+> information?
+
+ &mdash; some guy on Hacker News
+
+
+### That being said
+
+> Using macros to pre-compile the lenses is <strike>clever but feels like
+> </strike> a
+> **HACK** around typed-clojure instead of being aligned to it. All of the
+> information needed to determine a lens' action is available at
+> compile time even prior to expansion.  Can a van Laarhoven
+> representation be made in typed-clojure that recovers this
+> information?
+
+ &mdash; some guy on Hacker News
+
+
+### That being said
+
+> Using macros to pre-compile the lenses is clever, but feels like a
+> hack around typed-clojure instead of being aligned to it. All of the
+> information needed to determine a lens' action is available at
+> compile time even prior to expansion.  <u>Can a van Laarhoven
+> representation be made in typed-clojure</u> that recovers this
+> information?
+
+ &mdash; some guy on Hacker News
+
+
+### That being said
+
+> Can a van Laarhoven representation be made in typed-clojure that
+> recovers this information?
+
+1. Yes! <!-- .element: class="fragment" data-fragment-index="1" -->
+
+2. Not without horror. <!-- .element: class="fragment" data-fragment-index="2" -->
+
+![horror](horror.jpg) <!-- .element: class="fragment" data-fragment-index="2" -->
+
 
 
 ### Van Laarhoven Lenses
@@ -546,6 +601,10 @@ type Lens s a = Functor f => (a -> f a) -> s -> f s
 ~~~
 Make a single lens do different things by passing it different functors.
 
+
+### Van Laarhoven fly-by
+
+<img src="warp_drive.jpg" width=500px>
 
 
 ### Van Laarhoven without type
@@ -781,6 +840,8 @@ With currying, you could compose with ```comp```ose.
 
 ### Don't do this at home.
 
+<img src="bridefrank.jpg" width=300px>
+
 * <!-- .element: class="fragment" data-fragment-index="1" --> Even when ```core.typed``` is "finished"...
 
 * <!-- .element: class="fragment" data-fragment-index="2" --> ```Monad``` & co. are not a natural fit for gradual typing: 
@@ -824,3 +885,33 @@ With currying, you could compose with ```comp```ose.
 
 
 ![](totoro.jpg)
+
+
+
+### Appendix
+
+
+
+### core.typed vs prismatic.schema
+
+* ```(> typed schema)```
+ * True type checking/inference rather than validation on function entry.
+ * Not dependent on unit tests
+
+* ```(> schema typed)```
+ * Arbitrary validation functions
+ * Documentation
+ * Error messages
+ * Support
+
+
+### core.typed vs prismatic.schema
+
+* ```(compare schema typed)```
+ * ```typed``` more ambitious
+ * ```schema``` more obviously feasible
+
+* ```(= schema typed)```
+ * Batch-oriented: no squiggly red lines
+ * Honored in the breach.
+
