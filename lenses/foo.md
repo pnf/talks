@@ -17,6 +17,30 @@ an exploration of <strike>strong</strike> <strike>gradual</strike>  _appropriate
          blog.podsnap.com
 
 
+### The road
+
+<img src="./shared/theroad.jpg">
+
+FORTRAN (IV ff.) &#8605;
+_APL_ &#8605;
+MACRO-11 &#8605;
+PASCAL &#8605;
+C &#8605;
+PERL &#8605;
+C++ &#8605;
+JAVA &#8605;
+PYTHON &#8605;
+SCALA &#8605;
+_HASKELL_ &#8605;
+
+CLOJURE
+
+
+### disclaimer
+
+<img src="./shared/jonsnow.jpg">
+
+
 
 ### Foci
 
@@ -26,7 +50,7 @@ an exploration of <strike>strong</strike> <strike>gradual</strike>  _appropriate
 * Intro to ```core.typed```.
 * Lenses with core.typed.
 * Van Laarhoven lenses.
-* What is best?
+* What I just said.
 
 
 ### How do you find your bugs?
@@ -309,7 +333,7 @@ lenses.typed> (t/cf union)
   (let [s (union s #{"hi" "there"})]
     (map inc s)))
 ~~~
-* <!-- .element: class="fragment" data-fragment-index="3" --> core.typed infers a union type and flags the error at the ```map``` call
+* <!-- .element: class="fragment roll-in" data-fragment-index="3" --> core.typed infers a union type and flags the error at the ```map``` call
 ~~~.txt
 Polymorphic function map could not be applied to arguments:
 Domains:
@@ -344,6 +368,7 @@ Domains:
 Arguments:
 	(t/Set t/Int) (t/HSet #{"hi" "there"})
 ~~~
+* <!-- .element: class="fragment" data-fragment-index="4" --> &#8708; one "correct" type
 
 
 ### Back to AWS
@@ -382,14 +407,14 @@ Arguments:
 lenses> (t/cf (t/ann-form (assoc my-req :spot-price 1.0) Spot-Request))
 Spot-Request
 ~~~
-* Well spotted! <!-- .element: class="fragment" data-fragment-index="2" -->
+* Well spotted! <!-- .element: class="fragment roll-in" data-fragment-index="2" -->
 ~~~.clj
 lenses> (t/cf (t/ann-form (assoc my-req :spot-price "thin dime") Spot-Request))
   Type mismatch:
   Expected: 	Spot-Request
   Actual: 	(t/HMap :mandatory {:spot-price (t/Val "thin dime"), :type java.lang.String, ...})
 ~~~
-* Uh oh: <!-- .element: class="fragment" data-fragment-index="3" -->
+* Uh oh: <!-- .element: class="fragment roll-in" data-fragment-index="3" -->
 ~~~.clj
 lenses> (t/cf (t/ann-form (assoc-in my-req ["launch-specification" :image-id] "stringy")
                            Spot-Request))
