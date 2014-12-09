@@ -8,8 +8,8 @@ an exploration of <strike>strong</strike> <strike>gradual</strike>  _appropriate
 
 ### me
 
-<img src="./shared/biggerA.png" height=100px>
-<img src="./shared/shadow.jpg" height=100px>
+<img src="../shared/biggerA.png" height=100px>
+<img src="../shared/shadow.jpg" height=100px>
 
         Peter Fraenkel
              @podsnap
@@ -19,7 +19,7 @@ an exploration of <strike>strong</strike> <strike>gradual</strike>  _appropriate
 
 ### The road
 
-<img src="./shared/theroad.jpg">
+<img src="../shared/theroad.jpg">
 
 FORTRAN (IV ff.) &#8605;
 _APL_ &#8605;
@@ -38,7 +38,7 @@ CLOJURE
 
 ### disclaimer
 
-<img src="./shared/jonsnow.jpg">
+<img src="../shared/jonsnow.jpg">
 
 
 
@@ -876,7 +876,7 @@ With currying, you could compose with ```comp```ose.
 
 ### Don't do this at home.
 
-<img src="shared/bridefrank.jpg" width=300px>
+<img src="../shared/bridefrank.jpg" width=300px>
 
 * <!-- .element: class="fragment" data-fragment-index="1" --> Even when ```core.typed``` is "finished"...
 
