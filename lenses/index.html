@@ -14,11 +14,11 @@
 
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-		<link rel="stylesheet" href="reveal/css/reveal.min.css">
-		<link rel="stylesheet" href="reveal/css/theme/sky.css" id="theme">
+		<link rel="stylesheet" href="../reveal.js/css/reveal.min.css">
+		<link rel="stylesheet" href="../reveal.js/css/theme/sky.css" id="theme">
 
 		<!-- For syntax highlighting -->
-		<!-- <link rel="stylesheet" href="reveal/lib/css/zenburn.css"> -->
+		<!-- <link rel="stylesheet" href="../reveal.js/lib/css/zenburn.css"> -->
 
 		<!-- If the query includes 'print-pdf', include the PDF print sheet -->
 		<script>
@@ -32,7 +32,7 @@
 		</script>
 
 		<!--[if lt IE 9]>
-		<script src="reveal/lib/js/html5shiv.js"></script>
+		<script src="../reveal.js/lib/js/html5shiv.js"></script>
 		<![endif]-->
 <style type="text/css">
   blockquote { text-align: left; }
@@ -57,8 +57,8 @@
 
 		</div>
 
-		<script src="reveal/lib/js/head.min.js"></script>
-		<script src="reveal/js/reveal.min.js"></script>
+		<script src="../reveal.js/lib/js/head.min.js"></script>
+		<script src="../reveal.js/js/reveal.min.js"></script>
 
 		<script>
 
@@ -77,21 +77,21 @@
 				// parallaxBackgroundImage: 'https://s3.amazonaws.com/hakim-static/reveal-js/reveal-parallax-1.jpg',
 			// parallaxBackgroundSize: '2100px 900px',
 math: {
-    mathjax: 'MathJax', // 'http://cdn.mathjax.org/mathjax/latest/MathJax.js',
+    mathjax: '../MathJax', // 'http://cdn.mathjax.org/mathjax/latest/MathJax.js',
     config: 'TeX-AMS_HTML-full' // See http://docs.mathjax.org/en/latest/config-files.html
   },
 
    			// Optional libraries used to extend on reveal.js
 			
 				dependencies: [
-					{ src: 'reveal/lib/js/classList.js', condition: function() { return !document.body.classList; } },
-					{ src: 'reveal/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
-			{ src: 'reveal/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: '../reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: '../reveal.js/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+			{ src: '../reveal.js/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
 			// { src: 'http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML', async:true},
-			{ src: 'MathJax/MathJax.js?config=TeX-AMS-MML_HTMLorMML', async:true},
-					{ src: 'reveal/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
-					{ src: 'reveal/plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
-					{ src: 'reveal/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+			{ src: '../MathJax/MathJax.js?config=TeX-AMS-MML_HTMLorMML', async:true},
+					{ src: '../reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: '../reveal.js/plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+					{ src: '../reveal.js/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
 				]
 			});
 
