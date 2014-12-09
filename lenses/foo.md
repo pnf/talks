@@ -876,7 +876,7 @@ With currying, you could compose with ```comp```ose.
 
 ### Don't do this at home.
 
-<img src="bridefrank.jpg" width=300px>
+<img src="shared/bridefrank.jpg" width=300px>
 
 * <!-- .element: class="fragment" data-fragment-index="1" --> Even when ```core.typed``` is "finished"...
 
