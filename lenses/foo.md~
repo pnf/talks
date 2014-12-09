@@ -1,0 +1,567 @@
+Title: vanholes - Van Laarhoven Lenses in Clojure
+Date: 2014-10-08
+Category: coding
+Slug: vanhole
+Tags: clojure, core.typed, functional, lenses
+Author: Peter Fraenkel
+
+In two previous posts, I went on about lenses in Clojure.
+[Pinholes](http://blog.podsnap.com/pinhole.html) comprised
+a small library of higher order functions to formalize and simplify
+the viewing and manipulation of complex nested structures.
+[Tinholes](http://blog.podsnap.com/tinhole.html) did essentially the same
+thing, but with macros instead.  In both cases, there's recursion going on,
+as we burrow through layers of nesting, but macros had the advantage
+of doing it all before compilation, giving ```core.typed``` a chance to
+check our work.
+
+The macro post was inexplicably popular, catapulting me to levels of
+fame I never expected to achieve without consciously emulating an
+early De Niro character.  It even made the low 20's 
+on Hacker News,
+where [this comment](https://news.ycombinator.com/item?id=8381463)
+was made:
+
+    :::text
+	Using macros to pre-compile the lenses is clever, but
+
+
+Punch drunk on Google Analytics, I was inclined to stop reading at "clever,"
+but, reminding myself that self doubt is the mother of all virtue, I pressed on:
+
+    :::text
+    feels like a hack around typed-clojure instead of being
+    aligned to it. All of the information needed to determine a lens'
+    action is available at compile time even prior to expansion. Can a
+    van Laarhoven representation be made in typed-clojure that
+    recovers this information?
+
+Interesting.  (The bit further down, where I'm advised to show a "little
+humility," was less interesting.  Mea culpa, already, mea maxima culpa.)
+Can we, in fact, make the van Laarhoven formulation be made to work in
+typed Clojure?
+
+#### TL;DR
+
+1. Yes we can!
+2. Though with less than perfect grace.
+3. Typed clojure is amazing and important.
+4. But it's a work in progress.
+5. Even when it's finished, coding styles that work well in Haskell
+   will still be awkward in Clojure.
+6. And vice versa.   
+7. Either way, strong typing is both crucial and achievable.
+
+While not originally intended as such, the latter points may constitute a feeble response
+to
+
+![](images/chiusano-tweet.png)
+
+and the
+[post](http://existentialtype.wordpress.com/2011/03/19/dynamic-languages-are-static-languages/)
+to which it refers.
+
+Continuing the tradition of awesome nomenclature, I am honored to present **vanholes**.
+
+#### The van Laarhoven representation of lenses
+
+If you don't know much about van Laarhoven lenses, but do know a little Haskell
+I strongly recommend
+[this tutorial](http://blog.jakubarnold.cz/2014/07/14/lens-tutorial-introduction-part-1.html),
+with which I would never try to compete.
+There's also a
+[great talk by Simon Peyton Jones](https://skillsmatter.com/skillscasts/4251-lenses-compositional-data-access-and-manipulation),
+but, as you'll discover if you try the link, its permissions were recently
+locked down, roughly coincident with my post going up, 
+making last Monday a banner day for the forces of ignorance regarding lenses.
+
+The basic, mind-blowing idea of the van Laarhoven representation is that,
+rather than specifying separate getter and setter functions for some piece
+of data within a structure, you can write just one function, with a, seemingly,
+very weird type.  In Haskell,
+
+~~~.hs
+ type Lens s a = Functor f => (a -> f a) -> s -> f s
+~~~
+
+i.e. a function that takes two arguments
+
+*  first a function from some type ```a``` to a ```f```unctor over that type
+*  the second a ```s```tructure
+
+and returns the same ```f```unctor, but over the ```s```tructure type.
+
+#### Untyped van Laarhoven lenses
+
+To some, this section is totally backwards and probably sacrilege, since the
+representation is usually derived by reasoning about types, but exploring the
+mechanics in conventional Clojure can be interesting.
+
+The basic "trick" is that, since lenses will be written take arbitrary functors,
+we will be able to pick specific ones that twist the lens function into
+the right sort of accessor function.
+
+A really simplistic functor can be built in Clojure using protocols.  Since
+protocol methods are dispatched based on their first argument, we'll need
+to implement a backwards ```p-fmap``` method
+that takes the container-like thing
+first, and then wrap the method call in an ```fmap``` function to reverse the
+arguments.
+
+~~~.clj
+  (t/defprotocol IFunctor
+    (p-fmap [this fun]))
+  (defn fmap [fun c] (p-fmap c fun))
+~~~
+
+We could implement a very boring functor,
+
+~~~.clj
+  (defrecord Holder [thing]
+  	IFunctor
+	(p-fmap [{thing :thing} fun] (->Holder (fun thing)))
+~~~
+
+or, for the ultimate in boring,
+~~~.clj
+  (defrecord Const [getConst]
+	IFunctor
+	(p-fmap [this _] this))
+~~~
+which totally ignores the function, leaving the ```getConst``` field unchanged.
+
+While boring, ```Const``` is not completely useless, because we can define
+
+~~~.clj
+  (defn view [lens s] (:getConst (lens ->Const s)))
+~~~
+
+where, happily, the lens is being passed exactly the right arguments for
+a ```Lens```:
+
+1. ```->Const```, which is a function from something to a ```Const``` functor over it,
+2. a structure, ```s```,
+
+and we expect to get back a ```Const``` functor over the structure, which we can
+extract with ```:getConst```.
+
+For concreteness, let's use as our structure a vector pair, like ```[1 2]```,
+and write a lens to get at the first element:
+
+~~~.clj
+(defn l-1 [x->Fx pair] (fmap #(vector % (second pair))
+                             (x->Fx (first pair))))
+~~~
+
+Then ```(view l-1 [3 4])``` evaluates as:
+
+1. ```(:getConst (l-1 ->Const [3 4]))```
+2. ```(:getConst (fmap #(vector % 4) (->Const 3)))```
+3. ```(:getConst (p-fmap (->Const 3) #(vector % 4)))```
+4. ```(:getConst (->Const 3))```
+5. ```3```
+
+If were only going to use ```l-1``` with the ```Const``` functor, you'd wonder
+why we bothered typing out ```#(vector % (second pair))```,
+as it was destined to be ignored.  Fortunately, there's another functor we can
+throw at it:
+
+~~~.clj
+  (defrecord Identity [runIdentity]
+     IFunctor
+	 (p-fmap [{x :runIdentity} fun] (->Identity (fun x))))
+
+  (defn lset [lens x s] (:runIdentity (lens (constantly (->Identity x)) s)))
+~~~
+
+(We can't use ```set```, because of the existing ```clojure.core/set```.)
+Here, ```constantly``` has the effect of ignoring the original occupant, while
+we no longer ignore the mapping function.
+```(lset l-1 5 [3 4])``` evaluates as:
+
+1. ```(:runIdentity (l-1 (constantly (-> Identity 5)) [3 4]))```
+2. ```(:runIdentity (fmap #(vector % 4) ((constantly (-> Identity 5)) 3)))```
+3. ```(:runIdentity (p-fmap (->Identity 5) #(vector % 4)))```
+4. ```(:runIdentity (->Identity [5 4]))```
+5. ```[5 4]```
+
+In fact, the set operation us usually defined in terms of something called ```over```,
+which lets you apply a function to the focal point:
+
+~~~.clj
+  (defn over [ln f s] (:runIdentity (ln #(->Identity (f %)) s)))
+  (defn lset [ln x s] (over ln (constantly x) s))
+~~~
+
+You can verify that ```(over l-1 inc [3 4])``` returns ```[4 4]```.
+
+#### Composition of lenses
+
+One nice aspect of this representation is that, the lenses being ordinary
+functions, they can be composed.  Let's say we have another lens, for
+accessing the ```:foo``` element of a hashmap.  It's the same pattern as before.
+The first argument of ```fmap``` is a function that implants an element in the
+structure, and the second argument is the extraction of that element, wrapped
+in the input function:
+
+~~~.clj
+  (defn l:foo [x->Fx hm]
+	(fmap #(assoc hm :foo %)
+          (x->Fx (:foo hm))))
+~~~
+
+It's tempting to write a macro for building these things out of traditional
+getters and setters
+
+~~~.clj
+(defmacro deflens [lname implant extract]
+  `(defn ~lname [x->Fx# s#]
+      (fmap (fn [x#] (~implant s# x#))
+	  (x->Fx# (~extract s#)))))
+~~~
+
+with which we might have written:
+
+~~~.clj
+  (deflens l:foo #(assoc %1 :foo %2) :foo)
+~~~
+
+The alert smartass will now be asking why, having made such a big deal about
+representing the bidirectional lens in a single function, rather than as
+separate functions for each direction, we're now writing convenience tools
+for building the single function out of the separate functions.  The riposte
+to this question is that lenses, being functions, can be composed.
+
+
+That is, they could be composed if they were unary rather than binary
+functions, which they would be in Haskell, since everything is curried
+there: ```(a -> f a) -> s -> f s``` is equivalent to
+```(a -> f a) -> (s -> f s)```.  To get the same effect in Clojure, we need
+to curry and uncurry explicitly, e.g.
+~~~.clj
+  (defn curry [f2]
+	(fn [x] (fn [y] (f2 x y))))
+  (defn uncurry [f1]
+	(fn [x y] ((f1 x) y)))
+~~~
+with which we can now compose our two lenses like this:
+~~~.clj
+  user> (lset (uncurry (comp (curry l:foo) (curry l-1))) 9 {:foo [1 2]})
+  {:foo [9 2]}
+~~~
+
+The process can be streamlined in all sorts of ways, like
+~~~.clj
+  (defn lcomp [& ls] (uncurry (apply comp (map curry ls))))
+~~~
+so we can just do ```(lset (lcomp l:foo l-1) ...)```.  One might be (or maybe was)
+tempted to write more general utilities along these lines, but that would
+needlessly complicate the next section of this post.
+
+#### Typed var Laarhoven lenses
+
+The original mission was to explore lenses in typed Clojure.  The mission would be easier
+were ```core.typed``` fully implemented, documented and tested, but it's sort of not,
+especially in the mad interzone of protocols and higher kinded types.
+(**Important:** This isn't to disparage the project in any way.  It's a colossal achievement for
+[about 1.03 people](https://github.com/clojure/core.typed/graphs/contributors), who
+are the first to admit that it's not done yet.)
+
+There are at least a few examples of people not quite getting functors to work.  The protocol declaration is
+lifted from a [Google groups response by Ambrose](https://groups.google.com/d/msg/clojure-core-typed/H_1mHmB7sc8/NsekVwkb2HsJ) to one of them:
+
+~~~.clj
+ (t/ann-protocol [ [a :variance :covariant] ] IFunctor
+   p-fmap
+   (t/All [b] (t/IFn [(IFunctor a) [a -> b] -> (IFunctor b)])))
+ (t/defprotocol IFunctor
+   (p-fmap [this fun]))
+~~~
+
+
+This is reassuringly similar to the Haskell declaration
+
+~~~.clj
+    (t/All [b]       (t/IFn [(IFunctor a) [a -> b] ->          (IFunctor b)])))
+    ;; fmap :: Functor f =>               (a -> b) -> (f a) -> (f b)
+~~~
+
+but the differences are important.
+
+1. Foremost is that the specific implementation
+   of ```fmap``` will be determined at runtime by dynamic dispatch[^dispatch] on the subtype,
+   rather than chosen by matching type at compile time.  We _cannot possibly_ do the latter,
+   because Clojure typing is completely separate from compilation.  This is why we
+   get/have to specify variance; subtyping and therefore variance are innate to JVM
+   languages but not to Haskell.
+2. Dynamic dispatch is also behind the reversal of the arguments to ```fmap```, as noted earlier.
+3. And by arguments we mean actual multiple arguments to a single function, rather than, multiple
+   functions, each of one argument, returning another function of one argument: by conscious design
+   choice, Clojure does not automatically curry, so we have one less ```->```.
+4. We don't take malicious pleasure in using the symbol ```f``` to mean both
+   function and functor.
+
+
+Ambrose warned in the aforementioned response that it "gets messier if you want to abstract over the Functor,"
+but, that being the whole point of this exercise, we soldier on.  ```Const``` is not that hard
+
+~~~.clj
+ (t/ann-record [ [a :variance :covariant] ] Const [getConst :- a])
+ (defrecord Const [getConst]
+    IFunctor
+    (p-fmap [this fun] this))
+~~~
+
+because, as we completely ignore the ```fun```ction, we don't have to worry about specifying its type.
+
+But in ```Identity``` we do use the function,
+
+~~~.clj
+(t/ann-record [ [a :variance :covariant] ] Identity [runIdentity :- a])
+(defrecord Identity [runIdentity]
+   IFunctor
+   ;; Can't actually do this, because fun hasn't been 
+   (p-fmap [this fun] (->Identity (fun (:runIdentity this)))))
+~~~
+
+so the above won't typecheck.
+
+We need to define and annotate ```fun``` before it's used, but after
+```->Identity``` has been defined, which requires extending ```Identity``` explicitly, rather than inline:
+
+~~~.clj
+  (t/ann-record [ [a :variance :covariant] ] Identity [runIdentity :- a])
+  (defrecord Identity [runIdentity])
+
+  ;; Now ->Identity exists
+
+  (t/ann identity-fmap (t/All [a b] (t/IFn [(Identity a) [a -> b] -> (Identity b)])))
+  (defn  identity-fmap [this f] (->Identity (f (:runIdentity this))))
+
+  ;; Now we have an fmap with a type.
+
+  (extend Identity
+    IFunctor
+    {:p-fmap identity-fmap}  )
+~~~
+
+The annotation for ```identity-fmap``` is pretty much the same as for ```p-fmap``` in the ```IFunctor```
+declaration, except specific to ```Identity```.
+
+Unfortunately, it still doesn't work:
+
+~~~.txt
+Expected: 	(clojure.core.typed/HMap :optional {:p-fmap [(Identity clojure.core.typed/Any) clojure.core.typed/Any -> clojure.core.typed/Any]})
+
+Actual: 	(clojure.core.typed/HMap :mandatory {:p-fmap (clojure.core.typed/All [a b] [(Identity a) [a -> b] -> (Identity b)])} :complete? true)
+~~~
+
+This is frightening but, I believe, spurious.  The ```:mandatory``` vs ```:optional``` shouldn't be important; that
+just means that we weren't required to have implemented ```p-fmap``` in this ```extend``` but could have done so
+later.  More worryingly,
+
+1.  The type-checker is expecting four ```Any```s, rather than a constrained arrangement of two types,
+    as if we had declared ```p-fmap```  to be
+    ```(t/IFn [(IFunctor a) [b -> c] -> (IFunctor d)])))``` rather than
+    ```(t/IFn [(IFunctor a) [a -> b] -> (IFunctor b)])))```.
+2.  Even so, the more specific case ought, I think, to be palatable to the more general one.
+
+So, we take the batteries out of the smoke detector and go back to sleep
+
+~~~.clj
+  (t/ann ^:no-check identity-fmap (t/All [a] (t/IFn [(Identity a) t/Any -> t/Any])))
+~~~
+
+only to be rudely awakened when we try to annotate ```fmap```:
+
+~~~.clj
+(t/ann fmap  (t/All [a b] (t/IFn [[a -> b] (IFunctor a) -> (IFunctor b)]) ))
+(defn  fmap [fun c] (p-fmap c fun))
+~~~
+
+The first problem is that protocols cannot, apparently, be used as type functions, and we get
+an error to this effect.  It's a little surprising, since we were able to use ```(IFunctor a)```
+within the definition of the ```IFunctor``` protocol itself.  Trawling the mailing list,
+we somehow find a posting containing a link to a
+[gist](https://gist.githubusercontent.com/leonardoborges/7347cfb0684d5b76a264/raw/1d0b26dae0d06e1e76dbfa7fc9abb4319ccee6bd/example_typed.clj) that defines a type function explicitly
+
+~~~.clj
+  (t/defalias Functor (t/TFn [ [a :variance :covariant] ] (Extends [(IFunctor a)]) ))
+~~~
+
+using the ```Extends``` keyword, which is ```ack```able in the ```core.typed``` source but not otherwise
+advertised.  With the legitimate ```Functor``` typefunction we make it past another few lines of code
+
+~~~.clj
+  (t/ann fmap  (t/All [a b] (t/IFn [[a -> b] (Functor a) -> (Functor b)])))
+  (defn  fmap [f c] (p-fmap c f))
+~~~
+
+and define the ```Lens``` type
+
+~~~.clj
+(t/defalias Lens (t/TFn [[s :variance :invariant]
+                         [a :variance :invariant]]
+                        [[a -> (Functor a)] s -> (Functor s)] ))
+~~~
+
+and write the ```l-1``` lens
+
+~~~~
+(t/ann l-1 (Lens (t/HVec [t/Int t/Int]) t/Int))
+(defn l-1 [f xy]
+  (fmap (t/fn [x :- t/Int] :-  (t/HVec [t/Int t/Int])
+  	       (vector x (isecond xy)))
+  	    (f (ifirst xy))))
+~~~~
+
+where ```ifirst``` and ```isecond``` are specialized to pairs of integers:
+
+~~~.clj
+  (t/ann ^:no-check isecond [(t/HVec [t/Int t/Int]) -> t/Int] )
+  (def isecond second)
+  (t/ann ^:no-check ifirst  [(t/HVec [t/Int t/Int]) -> t/Int])
+  (def ifirst first)
+~~~
+
+Getting back to our story,
+
+    :::text
+		A few speeches in this vein - and evil counsels carried the day.
+		They undid the bag, the Winds all rushed out, and in an instant
+		the tempest was upon them, carrying them headlong out to sea.
+		They had good reason for their tears: Ithaca was vanishing
+		astern. As for myself, when I awoke to this, my spirit failed me
+		and I had half a mind to jump overboard and drown myself in
+		the sea rather than stay alive and quietly accept such a calamity.
+		However, I steeled myself to bear it, and covering my head with
+		my cloak I lay where I was in the ship. So the whole fleet was
+		driven back again to the Aeolian Isle by that accursed storm, and
+		in it my repentant crews.
+
+or, in more modern translation,
+
+~~~.txt
+Type Error ... Invalid operator to type application: (IFunctor a)
+ExceptionInfo Type Checker: Found 1 error  clojure.core/ex-info (core.clj:4403)
+~~~
+
+I thought we had well and truly buried ```IFunctor```, but since
+
+1. it's still causing trouble,
+2. we know in advance that ```Identity``` and ```Const``` are the only functors we'll actually use,
+2. typed clojure supports union types,
+3. and I have no shame,
+
+~~~.clj
+(t/defalias DumbFunctor
+   (t/TFn [ [a :variance :covariant] ] (t/U (Identity a) (Const a))))
+~~~
+
+With ```Functor``` so redefined, everything type-checks, even
+
+~~~.clj
+(t/ann l:foo (Lens (t/HMap :mandatory {:foo (t/HVec [t/Int t/Int])})
+                   (t/HVec [t/Int t/Int])))
+(defn l:foo [f m]
+  (fmap
+   (t/fn [x :- (t/HVec [t/Int t/Int])] :- (t/HMap :mandatory {:foo (t/HVec [t/Int t/Int])})
+     (assoc m :foo x))
+     (f (:foo m))))
+~~~
+
+Thanks be to Athena, the annotations of ```curry```, ```uncurry``` and ```lcomp```, while verbose,
+work perfectly
+
+~~~.clj
+(t/ann curry (t/All [a b c]
+                    [[a b -> c] -> [a -> [b -> c]]]))
+(t/ann uncurry (t/All [a b c]
+                                 [ [a -> [b -> c]] -> [a b -> c]]))
+(t/ann lcomp (t/All [a b c d e]
+                    [[[b -> c] d -> e]
+                     [a b -> c]
+                     ->
+                     [a d -> e]]))
+~~~
+
+and, drumroll please,
+
+~~~.clj
+  (view (lcomp l:foo l-1) {:foo [1 2]})
+~~~  
+
+typechecks!  More importantly, infelicitous modifications of this do not, which suggests that,
+notwithstanding compromises along the way, we can provide assurances of type safety to future
+van Laarhoveners.
+
+
+#### But was it worth the trouble?
+
+Yes, for me.  I learned a few things, and I'll probably learn more when you correct
+my errors.
+
+From a practical standpoint, I couldn't possibly recommend that anyone take this route in
+real, production code today, and I'm not sure I would recommend it even after the
+```core.typed``` kinks have been worked out.  The ```tinhole``` approach is, for
+Clojure, more intuitive and concise, while offering no less type safety.
+
+Quite simply, ```Monad``` and company are not natural fits for any language that
+doesn't have sophisticated static typing fully integrated with its compiler.  By
+"fully integrated," I mean that the compiler produces different code for different types
+signatures and arguments.
+
+On the other hand, fancy macros _are_ a natural fit for languages that are
+meaningfully homoiconic.  By "meaningfully homoiconic," I mean that it's
+practical for normal people to write code-generating code, that such code is concise and
+that it doesn't appear to be in a different language from the code it generates.
+
+Homoiconicity does not substitute for type-checking, but, if it is innate to the language,
+the type checker may not need to be, thus enabling the sinful pleasures of
+dynamic typing while stll allowing a stricter regimen to be enforced.
+
+#### P.S.
+
+Transducers can easily described polymorphically with ```core.typed``` as
+
+~~~.clj
+  (t/defalias ReducingFn
+     (t/TFn [[a :variance :contravariant]
+             [r :variance :invariant]]
+        [r a -> r]))
+
+  (t/defalias Transducer (t/TFn [[a :variance :covariant]
+                                 [b :variance :contravariant]]
+                (t/All [r] [(ReducingFn a r) -> (ReducingFn b r)])))
+~~~
+
+which is almost literally transcribed from
+[a blog post](http://conscientiousprogrammer.com/blog/2014/08/07/understanding-cloure-transducers-through-types/)
+explaining transducers with Haskell.
+(Note, however, the use of ```ReducingFn``` rather than ```Reducer```, as in the post.
+The reducer is the collection-like thing, not the function with which it is reduced.
+The beauty of transducers is that they can be defined independently of the reducer.)
+
+And they work:
+
+~~~.clj
+  (t/ann double-me (Transducer t/Int t/Int t/Int))
+  (defn  double-me [reduction-function]
+    (fn [result input]
+      (reduction-function result (* 2 input))))
+
+  (t/ann plus (ReducingFn t/Int t/Int))
+  (def plus +)
+
+  (println  (reduce (double-me plus) 0 [1 2 3]))
+  ;; 12
+~~~
+
+
+
+
+
+[^dispatch]: Single dispatch, specifically.
+
+
+
